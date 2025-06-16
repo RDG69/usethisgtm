@@ -18,42 +18,45 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Helper function to clean and extract JSON from GPT output
+function extractJSON(rawText) {
+  const jsonStart = rawText.indexOf("[");
+  const jsonEnd = rawText.lastIndexOf("]");
+  if (jsonStart === -1 || jsonEnd === -1) {
+    throw new Error("GPT response did not contain valid JSON array.");
+  }
+  const jsonString = rawText.substring(jsonStart, jsonEnd + 1);
+  return JSON.parse(jsonString);
+}
+
 // Generate GPT intent signals
 async function generateGPTSignals() {
   const prompt = `
-You are generating a simulated business intelligence daily intent report for Silver Birch Growth Inc.
+You are generating simulated intent signals for Silver Birch Growth Inc. 
 
-Generate 10 highly plausible, detailed intent signals of B2B SaaS, fintech, AI, or martech companies who are likely showing buying signals or GTM/revenue challenges right now.
+Generate 10 highly plausible, detailed signals of B2B SaaS, fintech, AI, or martech companies who are showing signals they need GTM or revenue help.
 
-Return pure JSON only, using this schema:
+Respond ONLY in raw JSON array following this structure:
 [
   {
     "company": "Company Name",
     "location": "City, Country",
     "industry": "Industry Label",
-    "signal": "Very short summary of why intent is high",
+    "signal": "Very short description why intent is high",
     "intent": "Very High" or "High",
-    "hook": "Short phrase describing a GTM hook"
-  },
-  ...
+    "hook": "Short sales hook"
+  }
 ]
 `;
 
   const response = await openai.createChatCompletion({
     model: "gpt-4o",
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.5,
+    temperature: 0.4,
   });
 
-  let signals = [];
-  try {
-    const raw = response.data.choices[0].message.content;
-    signals = JSON.parse(raw);
-  } catch (err) {
-    console.error("Failed to parse GPT output", err);
-  }
-
-  return signals;
+  const raw = response.data.choices[0].message.content;
+  return extractJSON(raw);
 }
 
 // Generate HTML email report
@@ -66,36 +69,51 @@ function generateEmail(signals) {
       <img src="${logoUrl}" style="height: 50px;">
       <h2 style="color:#28A745;">🚀 SBG Daily Intent Signal Report</h2>
     </div>
-    <p>Today's enriched GTM & intent signals for B2B SaaS, fintech, martech & AI companies who may need revenue or GTM support:</p>
+    <p>Today's GTM & revenue intent signals for SaaS, fintech, martech & AI:</p>
     <table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse: collapse;">
       <tr bgcolor="#d4edda">
         <th>Company</th><th>Location</th><th>Industry</th><th>Signal</th><th>Intent</th><th>Hook</th>
       </tr>
-      ${signals
-        .map(
-          (s) => `
+      ${signals.map(s => `
       <tr>
         <td>${s.company}</td><td>${s.location}</td><td>${s.industry}</td><td>${s.signal}</td><td>${s.intent}</td><td>${s.hook}</td>
-      </tr>`
-        )
-        .join("")}
+      </tr>`).join('')}
     </table>
     <p style="margin-top:20px;font-size:12px;color:#999;">
-      Generated via AI enrichment (Twitter disabled for stability)
+      ✅ Fully AI-generated for internal SBG pipeline use.
     </p>
   </body>
   </html>
   `;
 }
 
-// Main serverless API handler
+// Main API endpoint
 module.exports = async (req, res) => {
   try {
     console.log("Starting GPT enrichment...");
 
-    const signals = await generateGPTSignals();
+    let signals = [];
+    try {
+      signals = await generateGPTSignals();
+      console.log(`Generated ${signals.length} intent signals`);
+    } catch (err) {
+      console.error("GPT output failed:", err);
+      signals = []; // fallback empty if parsing completely fails
+    }
 
-    console.log(`Generated ${signals.length} signals`);
+    if (signals.length === 0) {
+      // fallback hard-coded signals just so something goes out
+      signals = [
+        {
+          company: "Fallback AI Inc",
+          location: "San Francisco, USA",
+          industry: "AI SaaS",
+          signal: "Recently lost sales VP, struggling pipeline",
+          intent: "Very High",
+          hook: "Embed fractional GTM engine"
+        }
+      ];
+    }
 
     const html = generateEmail(signals);
 
