@@ -31,7 +31,7 @@ function scoreSignal(tweet) {
 
 // Generate HTML email with SBG branding
 function generateEmail(signals, tweets) {
-  const logoUrl = 'https://silverbirchgrowth.com/logo.png'; // Update with actual URL
+  const logoUrl = 'https://silverbirchgrowth.com/logo.png';
   return `
     <html>
     <body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; background-color: #ffffff;">
@@ -84,15 +84,15 @@ function generateEmail(signals, tweets) {
 // Main API endpoint
 module.exports = async (req, res) => {
   try {
-    // Fetch 100+ tweets
-    const tweets = await client.v2.search('B2B (sales help OR GTM OR pipeline OR revenue) (SaaS OR martech OR fintech OR analytics) from:founder OR from:CEO -B2C -gaming -filter:retweets')
-      .maxResults(150)
-      .execute();
+    // Fetch 100 tweets from founders/CEOs
+    const tweets = await client.v2.search('B2B (sales help OR GTM OR pipeline OR revenue) (SaaS OR martech OR fintech OR analytics) from:founder OR from:CEO -B2C -gaming -filter:retweets', {
+      max_results: 100
+    });
 
     const signals = [];
     const actionableTweets = [];
     for (const tweet of tweets.data) {
-      const user = await client.v2.user(tweet.author_id);
+      const user = await client.v2.userById(tweet.author_id);
       const { intent, hook } = scoreSignal(tweet);
       if (intent !== 'Medium') {
         const company = user.name.includes('founder') || user.name.includes('CEO') ? user.name : `Startup (${user.name})`;
@@ -110,4 +110,23 @@ module.exports = async (req, res) => {
           text: tweet.text,
           intent,
           hook,
- 
+          url: `https://x.com/${user.username}/status/${tweet.id}`,
+        });
+      }
+      if (signals.length >= 10 && actionableTweets.length >= 10) break;
+    }
+
+    const html = generateEmail(signals, actionableTweets);
+    await transporter.sendMail({
+      from: 'SBG Intent <no-reply@silverbirchgrowth.com>',
+      to: process.env.EMAIL_TO,
+      subject: 'Daily SBG B2B Tech Intent Signals',
+      html,
+    });
+
+    res.status(200).json({ message: 'Email sent', signals: signals.length, tweets: actionableTweets.length });
+  } catch (error) {
+    console.error(error.stack);
+    res.status(500).json({ error: 'Failed to process signals' });
+  }
+};
