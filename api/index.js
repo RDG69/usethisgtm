@@ -84,13 +84,15 @@ function generateEmail(signals, tweets) {
 // Main API endpoint
 module.exports = async (req, res) => {
   try {
-    // Fetch 100 tweets from founders/CEOs
-    const tweets = await client.v2.search('B2B (sales help OR GTM OR pipeline OR revenue) (SaaS OR martech OR fintech OR analytics) from:founder OR from:CEO -B2C -gaming -filter:retweets', {
-      max_results: 100
-    });
+    // Simplified search query for Basic Twitter API access level
+    const tweets = await client.v2.search(
+      'B2B (sales OR GTM OR pipeline OR revenue OR SaaS OR fintech OR martech) -B2C -gaming -filter:retweets',
+      { max_results: 50 }
+    );
 
     const signals = [];
     const actionableTweets = [];
+
     for (const tweet of tweets.data) {
       const user = await client.v2.userById(tweet.author_id);
       const { intent, hook } = scoreSignal(tweet);
