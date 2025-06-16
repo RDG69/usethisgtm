@@ -84,16 +84,16 @@ function generateEmail(signals, tweets) {
 // Main API endpoint
 module.exports = async (req, res) => {
   try {
-    // SUPER SAFE QUERY for Twitter Basic Access
-    const tweets = await client.v2.search(
+    const response = await client.v2.search(
       'B2B OR SaaS OR Fintech OR MarTech OR GTM OR Sales',
       { max_results: 50 }
     );
 
+    const { data = [] } = response;
     const signals = [];
     const actionableTweets = [];
 
-    for (const tweet of tweets.data) {
+    for (const tweet of data) {
       const user = await client.v2.userById(tweet.author_id);
       const { intent, hook } = scoreSignal(tweet);
       if (intent !== 'Medium') {
