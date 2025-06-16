@@ -1,7 +1,7 @@
 {
   "name": "sbg-intent-engine",
   "version": "1.0.0",
-  "description": "SBG AI-Powered Intent Signal Engine",
+  "description": "SBG Intent Engine — GPT-only version",
   "main": "index.js",
   "type": "module",
   "scripts": {
