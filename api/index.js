@@ -84,9 +84,9 @@ function generateEmail(signals, tweets) {
 // Main API endpoint
 module.exports = async (req, res) => {
   try {
-    // Simplified search query for Basic Twitter API access level
+    // SUPER SAFE QUERY for Twitter Basic Access
     const tweets = await client.v2.search(
-      'B2B (sales OR GTM OR pipeline OR revenue OR SaaS OR fintech OR martech) -B2C -gaming -filter:retweets',
+      'B2B OR SaaS OR Fintech OR MarTech OR GTM OR Sales',
       { max_results: 50 }
     );
 
