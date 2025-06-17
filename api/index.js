@@ -1,6 +1,7 @@
-const { Configuration, OpenAIApi } = require("openai");
-const nodemailer = require("nodemailer");
-require("dotenv").config();
+import { Configuration, OpenAIApi } from "openai";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Initialize OpenAI Client
 const openai = new OpenAIApi(
@@ -88,7 +89,7 @@ function generateEmail(signals) {
 }
 
 // Main API endpoint
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     console.log("Starting GPT enrichment...");
 
@@ -98,11 +99,10 @@ module.exports = async (req, res) => {
       console.log(`Generated ${signals.length} intent signals`);
     } catch (err) {
       console.error("GPT output failed:", err);
-      signals = []; // fallback empty if parsing completely fails
+      signals = [];
     }
 
     if (signals.length === 0) {
-      // fallback hard-coded signals just so something goes out
       signals = [
         {
           company: "Fallback AI Inc",
@@ -130,4 +130,4 @@ module.exports = async (req, res) => {
     console.error("Full failure:", err);
     res.status(500).json({ error: "Failed to process signals" });
   }
-};
+}
